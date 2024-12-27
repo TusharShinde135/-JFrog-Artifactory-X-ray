@@ -16,6 +16,14 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v3
 
+    - name: Check directory contents (debugging)
+      run: ls -al
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '16'  # Adjust to your preferred Node version
+
     - name: Set up JFrog CLI
       run: |
         curl -fL https://getcli.jfrog.io | sh
@@ -24,20 +32,14 @@ jobs:
     - name: Authenticate to Artifactory
       run: |
         jfrog rt c --url ${{ secrets.JFROG_URL }} --apikey ${{ secrets.JFROG_API_KEY }} --user ${{ secrets.JFROG_USERNAME }}
-        
-    - name: Install Dependencies (e.g., npm, maven, etc.)
+
+    - name: Install Dependencies
       run: |
-        # Example for Node.js
         npm install
-        # or for Maven projects
-        # mvn clean install
 
     - name: Build Artifact
       run: |
-        # Build command (example: for Node.js or Maven projects)
         npm run build
-        # or
-        # mvn package
 
     - name: Upload Artifact to Artifactory
       run: |
