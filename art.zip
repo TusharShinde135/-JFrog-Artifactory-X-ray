@@ -1,0 +1,72 @@
+// package.json
+{
+  "name": "vulnerable-nodejs-demo",
+  "version": "1.0.0",
+  "description": "Demo project with documented vulnerabilities for security testing",
+  "dependencies": {
+    "express": "4.16.0",
+    "lodash": "4.17.11",
+    "node-serialize": "0.0.4"
+  }
+}
+
+// app.js
+const express = require('express');
+const _ = require('lodash');
+const serialize = require('node-serialize');
+const app = express();
+
+// Vulnerability 1: Insecure deserialization
+app.post('/api/deserialize', (req, res) => {
+    // WARNING: Never use this in production! This is for demonstration only
+    const data = serialize.unserialize(req.body.data);
+    res.json({ result: data });
+});
+
+// Vulnerability 2: Prototype pollution
+app.post('/api/merge', (req, res) => {
+    // WARNING: Using vulnerable lodash version intentionally
+    const merged = _.merge({}, req.body);
+    res.json(merged);
+});
+
+// Vulnerability 3: Path traversal
+app.get('/api/files/:filename', (req, res) => {
+    // WARNING: Unsafe path handling
+    const filePath = './public/' + req.params.filename;
+    res.sendFile(filePath);
+});
+
+// Vulnerability 4: NoSQL Injection
+app.get('/api/users', (req, res) => {
+    // WARNING: Unsafe query construction
+    const query = { username: req.query.username };
+    // Simulated database query
+    res.json({ query });
+});
+
+app.listen(3000, () => {
+    console.log('Vulnerable app running on port 3000');
+});
+
+// README.md
+/*
+# Vulnerable Node.js Demo Project
+
+This project contains intentional vulnerabilities for security testing purposes only.
+DO NOT USE IN PRODUCTION!
+
+## Known Vulnerabilities:
+
+1. Insecure Deserialization (/api/deserialize)
+2. Prototype Pollution (lodash 4.17.11)
+3. Path Traversal (/api/files)
+4. NoSQL Injection vulnerability (/api/users)
+
+## Setup:
+1. npm install
+2. node app.js
+
+## Security Notice:
+This application is deliberately vulnerable and should only be run in isolated testing environments.
+*/
