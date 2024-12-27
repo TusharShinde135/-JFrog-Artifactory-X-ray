@@ -1,4 +1,4 @@
-name: CI Pipeline with JFrog Artifactory X-ray
+name: CI Pipeline with JFrog Artifactory
 
 on:
   push:
@@ -13,42 +13,48 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    # Step 1: Checkout the repository
     - name: Checkout Repository
       uses: actions/checkout@v3
 
-    - name: Check directory contents (debugging)
-      run: ls -al /home/runner/work/-JFrog-Artifactory-X-ray/-JFrog-Artifactory-X-ray/
-
+    # Step 2: Set up Node.js (or Java, Maven, etc., depending on your project)
     - name: Set up Node.js
       uses: actions/setup-node@v3
       with:
-        node-version: '16'
+        node-version: '16'  # Use the version you need (e.g., 16, 18, etc.)
 
+    # Step 3: Set up JFrog CLI
     - name: Set up JFrog CLI
       run: |
         curl -fL https://getcli.jfrog.io | sh
         sudo mv jfrog /usr/local/bin/jfrog
 
+    # Step 4: Authenticate to Artifactory
     - name: Authenticate to Artifactory
       run: |
         jfrog rt c --url ${{ secrets.JFROG_URL }} --apikey ${{ secrets.JFROG_API_KEY }} --user ${{ secrets.JFROG_USERNAME }}
 
+    # Step 5: Install dependencies
     - name: Install Dependencies
       run: |
-        npm install
+        npm install  # or `mvn install` for Java/Maven projects
 
+    # Step 6: Build Artifact
     - name: Build Artifact
       run: |
-        npm run build
+        npm run build  # or `mvn package` for Maven projects
 
+    # Step 7: Upload Artifact to Artifactory
     - name: Upload Artifact to Artifactory
       run: |
-        jfrog rt u "build/output/*" "your-artifactory-repo/path/to/destination/"
+        jfrog rt u "build/*" "your-artifactory-repo/path/to/destination/"
 
+    # Step 8: Scan Artifact with JFrog X-ray
     - name: Scan Artifact with JFrog X-ray
       run: |
         jfrog rt xr --scan --fail-threshold=HIGH --output=summary "your-artifactory-repo/path/to/destination/*"
 
+    # Step 9: Check Scan Results
     - name: Check for Scan Results
       run: |
         scan_result=$(jfrog rt xr --status)
