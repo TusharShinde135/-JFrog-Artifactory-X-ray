@@ -1,0 +1,58 @@
+name: CI Pipeline with JFrog Artifactory X-ray
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+
+    - name: Set up JFrog CLI
+      run: |
+        curl -fL https://getcli.jfrog.io | sh
+        sudo mv jfrog /usr/local/bin/jfrog
+
+    - name: Authenticate to Artifactory
+      run: |
+        jfrog rt c --url ${{ secrets.JFROG_URL }} --apikey ${{ secrets.JFROG_API_KEY }} --user ${{ secrets.JFROG_USERNAME }}
+        
+    - name: Install Dependencies (e.g., npm, maven, etc.)
+      run: |
+        # Example for Node.js
+        npm install
+        # or for Maven projects
+        # mvn clean install
+
+    - name: Build Artifact
+      run: |
+        # Build command (example: for Node.js or Maven projects)
+        npm run build
+        # or
+        # mvn package
+
+    - name: Upload Artifact to Artifactory
+      run: |
+        jfrog rt u "build/output/*" "your-artifactory-repo/path/to/destination/"
+
+    - name: Scan Artifact with JFrog X-ray
+      run: |
+        jfrog rt xr --scan --fail-threshold=HIGH --output=summary "your-artifactory-repo/path/to/destination/*"
+
+    - name: Check for Scan Results
+      run: |
+        scan_result=$(jfrog rt xr --status)
+        if [[ "$scan_result" == *"failure"* ]]; then
+          echo "X-ray scan failed! Aborting the process."
+          exit 1
+        else
+          echo "X-ray scan passed successfully!"
+        fi
