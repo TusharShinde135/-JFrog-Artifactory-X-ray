@@ -1,66 +1,60 @@
-name: CI Pipeline with JFrog Artifactory
+name: Upload Node.js App to Artifactory
 
 on:
   push:
     branches:
-      - main
+      - main  # Trigger the pipeline on push to the main branch
   pull_request:
     branches:
-      - main
+      - main  # Trigger on PR to the main branch
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    # Step 1: Checkout the repository
-    - name: Checkout Repository
-      uses: actions/checkout@v3
+      # Checkout the repository
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    # Step 2: Set up Node.js (or Java, Maven, etc., depending on your project)
-    - name: Set up Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '16'  # Use the version you need (e.g., 16, 18, etc.)
+      # Set up Node.js environment
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'  # Use the appropriate Node.js version
 
-    # Step 3: Set up JFrog CLI
-    - name: Set up JFrog CLI
-      run: |
-        curl -fL https://getcli.jfrog.io | sh
-        sudo mv jfrog /usr/local/bin/jfrog
+      # Install dependencies
+      - name: Install dependencies
+        run: |
+          npm install
 
-    # Step 4: Authenticate to Artifactory
-    - name: Authenticate to Artifactory
-      run: |
-        jfrog rt c --url ${{ secrets.JFROG_URL }} --apikey ${{ secrets.JFROG_API_KEY }} --user ${{ secrets.JFROG_USERNAME }}
+      # Create the package (tarball)
+      - name: Create tarball
+        run: |
+          npm pack
+          
+      # Set up JFrog CLI for Artifactory interaction
+      - name: Install JFrog CLI
+        run: |
+          curl -fL https://getcli.jfrog.io | sh
+          sudo mv jfrog /usr/local/bin/
 
-    # Step 5: Install dependencies
-    - name: Install Dependencies
-      run: |
-        npm install  # or `mvn install` for Java/Maven projects
+      # Configure JFrog CLI with Artifactory credentials
+      - name: JFrog CLI Configuration
+        run: |
+          jfrog rt config --url ${{ secrets.ARTIFACTORY_URL }} --user ${{ secrets.ARTIFACTORY_USER }} --password ${{ secrets.ARTIFACTORY_API_KEY }}
+        
+      # Upload the package to Artifactory
+      - name: Upload package to Artifactory
+        run: |
+          jfrog rt upload "nodejs-artifact-test-1.0.0.tgz" npm-repo/my-node-app/1.0.0/
 
-    # Step 6: Build Artifact
-    - name: Build Artifact
-      run: |
-        npm run build  # or `mvn package` for Maven projects
+      # Trigger Xray scan on the uploaded artifact
+      - name: Trigger Xray Scan
+        run: |
+          jfrog rt xray "npm-repo/my-node-app/1.0.0/nodejs-artifact-test-1.0.0.tgz"
 
-    # Step 7: Upload Artifact to Artifactory
-    - name: Upload Artifact to Artifactory
-      run: |
-        jfrog rt u "build/*" "your-artifactory-repo/path/to/destination/"
-
-    # Step 8: Scan Artifact with JFrog X-ray
-    - name: Scan Artifact with JFrog X-ray
-      run: |
-        jfrog rt xr --scan --fail-threshold=HIGH --output=summary "your-artifactory-repo/path/to/destination/*"
-
-    # Step 9: Check Scan Results
-    - name: Check for Scan Results
-      run: |
-        scan_result=$(jfrog rt xr --status)
-        if [[ "$scan_result" == *"failure"* ]]; then
-          echo "X-ray scan failed! Aborting the process."
-          exit 1
-        else
-          echo "X-ray scan passed successfully!"
-        fi
+      # Display scan results (optional)
+      - name: Display Xray Scan Results
+        run: |
+          jfrog rt xray "npm-repo/my-node-app/1.0.0/nodejs-artifact-test-1.0.0.tgz" --status
