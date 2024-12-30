@@ -43,18 +43,28 @@ jobs:
       - name: JFrog CLI Configuration
         run: |
           jfrog rt config --url ${{ secrets.ARTIFACTORY_URL }} --user ${{ secrets.ARTIFACTORY_USER }} --password ${{ secrets.ARTIFACTORY_API_KEY }}
-        
+
       # Upload the package to Artifactory
       - name: Upload package to Artifactory
         run: |
           jfrog rt upload "nodejs-artifact-test-1.0.0.tgz" npm-repo/my-node-app/1.0.0/
 
-      # Trigger Xray scan on the uploaded artifact
+      # Verify Artifact Upload
+      - name: Verify Artifact Upload
+        run: |
+          curl -u ${{ secrets.ARTIFACTORY_USER }}:${{ secrets.ARTIFACTORY_API_KEY }} -X GET "https://${{ secrets.ARTIFACTORY_URL }}/artifactory/npm-repo/my-node-app/1.0.0/nodejs-artifact-test-1.0.0.tgz"
+
+      # Check JFrog CLI Configuration
+      - name: Check JFrog CLI Configuration
+        run: |
+          jfrog rt config show
+
+      # Trigger Xray Scan
       - name: Trigger Xray Scan
         run: |
           jfrog rt xray "npm-repo/my-node-app/1.0.0/nodejs-artifact-test-1.0.0.tgz"
 
-      # Display scan results (optional)
+      # Display Xray Scan Results
       - name: Display Xray Scan Results
         run: |
-          jfrog rt xray "npm-repo/my-node-app/1.0.0/nodejs-artifact-test-1.0.0.tgz" --status
+          jfrog rt xray "npm-repo/my-node-app/1.0.0/nodejs-artifact-test-1.0.0.tgz" --status --details
